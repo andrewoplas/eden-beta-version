@@ -2,18 +2,11 @@ package subatom.eden_beta;
 
 import android.Manifest;
 import android.app.ActivityManager;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
-import android.content.pm.PackageManager;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.SystemClock;
 import android.support.annotation.NonNull;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
-import android.util.Log;
 import android.widget.Toast;
 
 import com.affectiva.android.affdex.sdk.Frame;
@@ -30,15 +23,14 @@ import com.google.android.youtube.player.YouTubePlayer.Provider;
 import com.google.android.youtube.player.YouTubePlayerView;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
-
-import subatom.eden_beta.Detector.*;
 
 
 public class YoutubePlayer extends YouTubeBaseActivity implements YouTubePlayer.OnInitializedListener, Detector.ImageListener, CameraDetector.CameraEventListener {
 
     public static final String API_KEY = "AIzaSyAhSHZi4V8YvFqLWNJWsAkICj4l8Wkug_k";
-    public String VIDEO_ID;
+    private String VIDEO_ID;
+    public static com.google.android.youtube.player.YouTubePlayer ytp = null;
+    private boolean isPlaying = false;
 
     private final static int CAMERA_PERMISSIONS_REQUEST_CODE = 0;
     private final static String[] CAMERA_PERMISSIONS_REQUEST = new String[]{android.Manifest.permission.CAMERA};
@@ -48,12 +40,13 @@ public class YoutubePlayer extends YouTubeBaseActivity implements YouTubePlayer.
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_youtube_player);
-
-        this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        //this.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
 
         VIDEO_ID = getIntent().getStringExtra("url");
-        YouTubePlayerView youTubePlayerView = (YouTubePlayerView) findViewById(R.id.youtube_player);
+        YouTubePlayerView youTubePlayerView = (YouTubePlayerView)findViewById(R.id.youtube_player);
         youTubePlayerView.initialize(API_KEY, this);
+
+
     }
 
 
@@ -96,22 +89,34 @@ public class YoutubePlayer extends YouTubeBaseActivity implements YouTubePlayer.
         player.setFullscreen(true);
         player.setPlayerStateChangeListener(playerStateChangeListener);
         player.setPlaybackEventListener(playbackEventListener);
-
+        player.setShowFullscreenButton(false);
         player.setPlayerStyle(YouTubePlayer.PlayerStyle.DEFAULT); //no play, no meter
 
         /** Start buffering **/
         if (!wasRestored) {
             player.cueVideo(VIDEO_ID);
         }
-        //canDetect = true;
-        //startService(new Intent(this, FaceDetector.class));
+        Emotion.detect = true;
+        ytp = player;
+        //player.seekToMillis(10000);
+       // Toast.makeText(this, player.getDurationMillis() + " ", Toast.LENGTH_SHORT).show();
+        startService(new Intent(this, DetectorService.class));
     }
 
     private PlaybackEventListener playbackEventListener = new PlaybackEventListener() {
-        @Override
+
         public void onBuffering(boolean arg0) {
-            //Toast.makeText(YoutubePlayer.this, (arg0 == true ? "TRUE":"FALSE"), Toast.LENGTH_SHORT).show();
-            Emotion.detect = false;
+            if (arg0 == true) {
+                StopWatch.pause();
+                Emotion.detect = false;
+            }
+            else {
+                StopWatch.resume();
+                Emotion.detect = true;
+            }
+
+
+
 
         }
         @Override
@@ -119,29 +124,33 @@ public class YoutubePlayer extends YouTubeBaseActivity implements YouTubePlayer.
             //pause timer, pause detector
             //Toast.makeText(YoutubePlayer.this, "PAUSE LIKE A POSSE", Toast.LENGTH_SHORT).show();
             Emotion.detect = false;
+            isPlaying = false;
+            StopWatch.pause();
         }
         @Override
         public void onPlaying() {
             //resume timer, resume detector
-            //Toast.makeText(YoutubePlayer.this, "PLAY LIKE A PLAYBOY", Toast.LENGTH_SHORT).show();
+            //Toast.makeText(YoutubePlayer.this, , Toast.LENGTH_SHORT).show();
+            //isPlaying = true;
             Emotion.detect = true;
-
-
+            StopWatch.resume();
         }
         @Override
         public void onSeekTo(int ms) {
             //overwrite list
+            //Toast.makeText(YoutubePlayer.this, ytp.getCurrentTimeMillis() + " ", Toast.LENGTH_SHORT).show();
         }
         @Override
         public void onStopped() {
             //Toast.makeText(YoutubePlayer.this, "STOP LIKE A CADILLAC", Toast.LENGTH_SHORT).show();
             Emotion.detect = false;
+            StopWatch.stop();
+            StopWatch.reset();
         }
     };
     private PlayerStateChangeListener playerStateChangeListener = new PlayerStateChangeListener() {
         @Override
         public void onAdStarted() {
-            //Toast.makeText(YoutubePlayer.this, "FUCKING ADS", Toast.LENGTH_SHORT).show();
             Emotion.detect = false;
         }
         @Override
@@ -149,36 +158,35 @@ public class YoutubePlayer extends YouTubeBaseActivity implements YouTubePlayer.
             //Toast.makeText(YoutubePlayer.this, arg0.name(), Toast.LENGTH_SHORT).show();
             stopService(new Intent(YoutubePlayer.this, DetectorService.class));
             Emotion.detect = false;
+            StopWatch.stop();
+            StopWatch.reset();
         }
         @Override
         public void onLoaded(String arg0) {
-            //Toast.makeText(YoutubePlayer.this, "LOAD LIKE YOUR MOM IN HER MOUTH", Toast.LENGTH_SHORT).show();
-            Emotion.detect = false;
+            //Emotion.detect = true;
 
         }
         @Override
         public void onLoading() {
             //Toast.makeText(YoutubePlayer.this, "LOADING LIKE YOUR MOM'S MOUTH RIGHT NOW", Toast.LENGTH_SHORT).show();
             Emotion.detect = false;
+            StopWatch.pause();
         }
         @Override
         public void onVideoEnded() {
-            //Toast.makeText(YoutubePlayer.this, "ENDED", Toast.LENGTH_SHORT).show();
-            stopService(new Intent(YoutubePlayer.this, DetectorService.class));
-            Intent i = new Intent(YoutubePlayer.this, Statistics.class);
-            //send json to statistics
-            startActivity(i);
             Emotion.detect = false;
+            stopService(new Intent(YoutubePlayer.this, DetectorService.class));
+            startActivity(new Intent(YoutubePlayer.this, Statistics.class));
+
             //Toast.makeText(YoutubePlayer.this, Emotion.getBrowFurrow(0) + " ", Toast.LENGTH_SHORT).show();
         }
         @Override
         public void onVideoStarted() {
-            // start emotion detector
+            //start emotion detector
 
 //            if (!CameraHelper.checkPermission(getApplicationContext()) && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
 //                ActivityCompat.requestPermissions(YoutubePlayer.this, CAMERA_PERMISSIONS_REQUEST, CAMERA_PERMISSIONS_REQUEST_CODE);
-//            }
-
+//
             if (!CameraHelper.checkPermission(YoutubePlayer.this)) {
                 requestPermissions(CAMERA_PERMISSIONS_REQUEST, CAMERA_PERMISSIONS_REQUEST_CODE);
             } else {
@@ -200,6 +208,7 @@ public class YoutubePlayer extends YouTubeBaseActivity implements YouTubePlayer.
                 handleCameraPermissionGrant = false;
             }
             Emotion.detect = true;
+            StopWatch.start();
 
         }
     };
@@ -240,6 +249,8 @@ public class YoutubePlayer extends YouTubeBaseActivity implements YouTubePlayer.
     public void onImageResults(List<Face> list, Frame frame, float v) {
 
     }
+
+
 
 
 }

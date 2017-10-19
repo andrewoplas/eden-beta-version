@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/SRC.iml" filepath="$PROJECT_DIR$/SRC.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
-      <module fileurl="file://$PROJECT_DIR$/eden_beta.iml" filepath="$PROJECT_DIR$/eden_beta.iml" />
     </modules>
   </component>
 </project>

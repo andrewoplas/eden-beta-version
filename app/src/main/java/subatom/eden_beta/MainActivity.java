@@ -13,32 +13,41 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.squareup.picasso.Picasso;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-
-
-
-public class MainActivity extends AppCompatActivity {
-    Button btnplay;
-    TextView txtMainName;
-    String vid_id  ;
-    EditText txtUrl;
-    Button btnPreview;
+public class MainActivity extends Activity {
+    private Button btnPlay;
+    private TextView txtMainName;
+    private String vid_id;
+    private EditText txtUrl;
+    private Button btnPreview;
 
 
     //https://m.youtube.com/watch?v=4o1egAQ6gJQ
     //https://m.youtube.com/watch?v=4o1egAQ6gJQ
-    public String video_url;
+    private String video_url;
 
-    Uri uri;
-    String videoID;
-    String url;
-    ImageView img;
+    private Uri uri;
+    private String videoID/* = "czgOWmtGVGs"*/;
+    private String url;
+    private ImageView img;
 
-    public class transfer implements View.OnClickListener{ //Pending
+    public class Transferrer implements View.OnClickListener{ //Pending
         public void onClick (View v){
+            video_url = txtUrl.getText().toString();
+            //the regex only WORKS ON MOBILE LINKS!
+            Pattern pattern = Pattern.compile(
+                    "^https?://.*(?:youtu.be/|v/|u/\\w/|embed/|watch?v=)([^#&?]*).*$",
+                    Pattern.CASE_INSENSITIVE);
+            Matcher matcher = pattern.matcher(video_url);
+            if (matcher.matches()){
+                videoID = matcher.group(1);
+            }
             Intent i = new Intent(MainActivity.this, YoutubePlayer.class);
             i.putExtra("url", videoID);
             startActivity(i);
@@ -48,13 +57,10 @@ public class MainActivity extends AppCompatActivity {
 
 
     public void setPreview(){
-        video_url = txtUrl.getText().toString();   //will be changed
-
-        uri = Uri.parse(video_url);
-        videoID = uri.getQueryParameter("v");
 
         url = "http://img.youtube.com/vi/" + videoID + "/default.jpg";
         Picasso.with(this).load(url).into(img);
+
     }
 
     @Override
@@ -63,7 +69,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         img= (ImageView) findViewById(R.id.imageView);
-        btnplay = (Button)findViewById(R.id.btnplay);
+        btnPlay = (Button)findViewById(R.id.btnplay);
         txtMainName = (TextView)findViewById(R.id.txtMainName);
         txtUrl = (EditText)findViewById(R.id.txtUrl);
 
@@ -72,10 +78,9 @@ public class MainActivity extends AppCompatActivity {
         Intent intent = getIntent();
         String nameHandler = intent.getStringExtra("user_name");
 
-        txtMainName.setText(nameHandler);
-        btnplay.setOnClickListener(new transfer());
-        txtMainName.setText(nameHandler);
 
+        btnPlay.setOnClickListener(new Transferrer());
+        txtMainName.setText("Hello, "+nameHandler);
         btnPreview.setOnClickListener(new OnClickPreview());
         //img.setImageResource(R.drawable.subtitles);
 
@@ -87,7 +92,16 @@ public class MainActivity extends AppCompatActivity {
     public class OnClickPreview implements View.OnClickListener {
        @Override
         public void onClick(View view) {
-            setPreview();
+           video_url = txtUrl.getText().toString();
+
+           Pattern pattern = Pattern.compile(
+                   "^https?://.*(?:youtu.be/|v/|u/\\w/|embed/|watch?v=)([^#&?]*).*$",
+                   Pattern.CASE_INSENSITIVE);
+           Matcher matcher = pattern.matcher(video_url);
+           if (matcher.matches()){
+               videoID = matcher.group(1);
+           }
+           setPreview();
         }
     }
 
